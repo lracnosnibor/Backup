@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+<head>  <style> 	canvas { position: fixed; top: 100px; left: 100px; width:200 height:100}   </style>  </head>
+<body>
+<script src="https://ajax.googleapis.com/ajax/libs/threejs/r84/three.min.js"></script>
+/*<script src='https://stemkoski.github.io/Three.js/js/THREEx.KeyboardState.js'></script>
+
+//<script src='https://stemkoski.github.io/Three.js/js/Detector.js'></script>
+//<script src='https://stemkoski.github.io/Three.js/js/OrbitControls.js'></script>
+//<script src='https://stemkoski.github.io/Three.js/js/THREEx.FullScreen.js'></script>
+//<script src='https://stemkoski.github.io/Three.js/js/THREEx.WindowResize.js'></script>
+//<script src='https://stemkoski.github.io/Three.js/fonts/helvetiker_bold.typeface.js'></script>
+
+//<script src="js/three.js"></script>
+//<script src="js/three.min.js"></script>
+//<script src="js/OrbitControls.js"></script>
+//<script src="js/KeyboardState.js"></script>
+//<script src="js/ImageUtils.js"></script>
+//<script src="js/loaders/MTLLoader.js"></script>
+//<script src="js/loaders/OBJMTLLoader.js"></script>  /*
+<script>
+var clock = new THREE.Clock();
+var scene, renderer, camera;
+var keyboard = new KeyboardState();
+
+var view_height=200.0;
+
+var truck;  //2015 F150 Screw short bed
+var truck_wheel_base = 145.0/12;
+var truck_l = 231/12 ,truck_h = 1.0 ,truck_w = 67.6/12 ;
+//var hitch_to_wheels = 56/12;
+var hitch_to_wheels = 0/12;
+var truck_heading   = 90.0/57.29;
+var xtruck=0.0, ytruck=0.0;
+var steer_angle     = 0.0;
+var speed           = 0.0;
+
+var trailer; // Grand Design Imagine 2600RB
+var trailer_hitch_to_wheels   = 20.0;
+//var trailer_hitch_to_body = 4.0;
+var trailer_hitch_to_body = 0.0;
+var trailer_l = 26.0 ,trailer_h = 1.0 ,trailer_w = 8.5 ;
+var trailer_heading      = 90.0/57.29;
+
+var wheel;
+var wheel_l = 2.0 ,wheel_h = 2.0 ,wheel_w = 0.5 ;
+
+init();
+animate();
+
+function init()
+{	var width = window.innerWidth-200;
+	var height = window.innerHeight-200;
+
+	renderer = new THREE.WebGLRenderer({antialias: true});
+	renderer.setSize (width, height);
+	document.body.appendChild (renderer.domElement);
+
+	scene = new THREE.Scene();
+
+	camera = new THREE.PerspectiveCamera (45, width/height, 1, 10000);
+
+	truck = new THREE.Mesh (new THREE.BoxGeometry (truck_l, truck_w, truck_h), new THREE.MeshLambertMaterial ({color: 0x0000ff}) );
+//	truck.position.set (xtruck,ytruck,0.0);
+	scene.add (truck);
+
+	trailer = new THREE.Mesh (new THREE.BoxGeometry (trailer_l, trailer_w, trailer_h), new THREE.MeshLambertMaterial ({color: 0xff0000}) );
+//	trailer.position.set (xtruck-30,ytruck,0.0);
+	scene.add (trailer);
+
+	wheel = new THREE.Mesh (new THREE.BoxGeometry (wheel_l, wheel_w, wheel_h), new THREE.MeshLambertMaterial ({color: 0x00ff00}) );
+//	wheel.position.set (0.0,20.0,2.0);
+	scene.add (wheel);
+
+//  lines to show axes
+//	xbox = new THREE.Mesh (new THREE.BoxGeometry (500,1,1), new THREE.MeshLambertMaterial ({color: 0xff0000}) ); // vertical axis
+//	xbox.position.set (0,0,0);
+//	scene.add (xbox);
+// Roadway
+	xboxl = new THREE.Mesh (new THREE.BoxGeometry (0.25,400.0,0.25), new THREE.MeshLambertMaterial ({color: 0xfe0000}) );
+	xboxl.position.set (-4.25,0,0);
+	scene.add (xboxl);
+
+	xboxr = new THREE.Mesh (new THREE.BoxGeometry (0.25,400,0.25), new THREE.MeshLambertMaterial ({color: 0xfe0000}) );
+	xboxr.position.set (10,0,0);
+	scene.add (xboxr);
+// Driveway or cross road
+        ybox = new THREE.Mesh (new THREE.BoxGeometry (500,0.25,0.25), new THREE.MeshLambertMaterial ({color: 0x0000ff}) );
+	ybox.position.set (0,0,0);
+	scene.add (ybox);
+
+//	zbox = new THREE.Mesh (new THREE.BoxGeometry (1,1,500), new THREE.MeshLambertMaterial ({color: 0xffffff}) );
+//	zbox.position.set (0,0,250);
+//	scene.add (zbox);
+
+	var pointLight = new THREE.PointLight (0xffffff);
+	pointLight.position.set (20,20, 200);
+	scene.add (pointLight);
+
+	var ambientLight = new THREE.AmbientLight (0x555555);
+	scene.add(ambientLight)
+
+}
+
+function animate()
+{       var dt = clock.getDelta();
+        xtruck         = xtruck + (dt*speed)*Math.cos(truck_heading);   // posn at wheels
+        ytruck         = ytruck + (dt*speed)*Math.sin(truck_heading);
+        truck_heading = truck_heading + ((speed/truck_wheel_base)*Math.tan(steer_angle/57.29))*dt;
+
+        var xtruckh = xtruck-Math.cos(truck_heading)*(hitch_to_wheels); // posn at hitch for trailer ref
+        var ytruckh = ytruck-Math.sin(truck_heading)*(hitch_to_wheels);
+
+        trailer_heading = trailer_heading + ((speed/trailer_hitch_to_wheels)*Math.sin(truck_heading-trailer_heading))*dt;
+        xtrailer = xtruckh - Math.cos(trailer_heading)*trailer_hitch_to_wheels;
+        ytrailer = ytruckh - Math.sin(trailer_heading)*trailer_hitch_to_wheels;
+
+				var xtruckcg = xtruck + Math.cos(truck_heading)*((truck_l/2)-hitch_to_wheels); // posn at cg for drawing
+        var ytruckcg = ytruck + Math.sin(truck_heading)*((truck_l/2)-hitch_to_wheels);
+
+        var xwheelcg = xtruckcg + Math.cos(truck_heading)*(truck_wheel_base/2.0); // posn at wheelcg for drawing
+        var ywheelcg = ytruckcg + Math.sin(truck_heading)*(truck_wheel_base/2.0);
+
+        var xtrailercg = xtruckh -Math.cos(trailer_heading)*((trailer_l/2)+trailer_hitch_to_body); // posn at cg trailer body for drawing
+        var ytrailercg = ytruckh -Math.sin(trailer_heading)*((trailer_l/2)+trailer_hitch_to_body);
+
+		truck.position.set (xtruckcg, ytruckcg, 0.0);
+		truck.rotation.z = (truck_heading);
+
+  	trailer.position.set (xtrailercg, ytrailercg, 0.0);
+    trailer.rotation.z = (trailer_heading);
+
+    wheel.position.set (xwheelcg, ywheelcg, 20.0);
+    wheel.rotation.z =   (truck_heading+(steer_angle/57.29));
+
+		camera.position.x = xtruck;
+		camera.position.y = ytruck;
+		camera.position.z = view_height;
+
+		var text2 = document.createElement('div');
+		text2.style.position = 'absolute';
+		text2.style.width = 200;
+		text2.style.height = 200;
+		text2.style.backgroundColor = "blue";
+		text2.innerHTML= dt;
+		text2.style.top = 100 + 'px';
+		text2.style.left = 600 + 'px';
+		document.body.appendChild(text2);
+
+	requestAnimationFrame ( animate );    update();   render();
+}
+
+function myclamp(x,lo,hi)
+{ 	if (x < lo) return lo;	if (x > hi) return hi; 	return x;	}
+
+function update()
+{	//controls.update();
+	keyboard.update();
+	speed = 0.0;
+	if ( keyboard.pressed("left") )   	steer_angle += 0.5;
+	if ( keyboard.pressed("right") )  	steer_angle -= 0.5;
+	if ( keyboard.pressed("up") )  		speed = 2.0;
+	if ( keyboard.pressed("down") )  	speed = -2.0;
+	if ( keyboard.pressed("Z") )  		speed = 0.0;
+	if ( keyboard.pressed("space") )  	steer_angle = 0.0;
+  if ( keyboard.pressed("pageup") )  	view_height += 1.0;
+	if ( keyboard.pressed("pagedown") )  	view_height -= 1.0;
+
+	steer_angle = myclamp (steer_angle, -37.0, 37.0);
+	speed = myclamp (speed, -20.0, 20.0);
+
+var text2 = document.createElement('div');
+text2.style.position = 'absolute';
+//text2.style.zIndex = 1;    // if you still don't see the label, try uncommenting this
+text2.style.width = 200;
+text2.style.height = 200;
+text2.style.backgroundColor = "blue";
+text2.innerHTML=steer_angle;
+text2.style.top = 100 + 'px';
+text2.style.left = 100 + 'px';
+document.body.appendChild(text2);
+
+}
+
+function render()
+{	renderer.render (scene, camera);			}
+/**
+ * @author Lee Stemkoski
+ *
+ * Usage:
+ * (1) create a global variable:
+ *      var keyboard = new KeyboardState();
+ * (2) during main loop:
+ *       keyboard.update();
+ * (3) check state of keys:
+ *       keyboard.down("A")    -- true for one update cycle after key is pressed
+ *       keyboard.pressed("A") -- true as long as key is being pressed
+ *       keyboard.up("A")      -- true for one update cycle after key is released
+ *
+ *  See KeyboardState.k object data below for names of keys whose state can be polled
+ */
+
+// initialization
+KeyboardState = function()
+{
+	// bind keyEvents
+	document.addEventListener("keydown", KeyboardState.onKeyDown, false);
+	document.addEventListener("keyup",   KeyboardState.onKeyUp,   false);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+KeyboardState.k =
+{
+    8: "backspace",  9: "tab",       13: "enter",    16: "shift",
+    17: "ctrl",     18: "alt",       27: "esc",      32: "space",
+    33: "pageup",   34: "pagedown",  35: "end",      36: "home",
+    37: "left",     38: "up",        39: "right",    40: "down",
+    45: "insert",   46: "delete",   186: ";",       187: "=",
+    188: ",",      189: "-",        190: ".",       191: "/",
+    219: "[",      220: "\\",       221: "]",       222: "'"
+}
+
+KeyboardState.status = {};
+
+KeyboardState.keyName = function ( keyCode )
+{
+	return ( KeyboardState.k[keyCode] != null ) ?
+		KeyboardState.k[keyCode] :
+		String.fromCharCode(keyCode);
+}
+
+KeyboardState.onKeyUp = function(event)
+{
+event.preventDefault();
+	var key = KeyboardState.keyName(event.keyCode);
+	if ( KeyboardState.status[key] )
+		KeyboardState.status[key].pressed = false;
+}
+
+KeyboardState.onKeyDown = function(event)
+{
+event.preventDefault();
+	var key = KeyboardState.keyName(event.keyCode);
+	if ( !KeyboardState.status[key] )
+		KeyboardState.status[key] = { down: false, pressed: false, up: false, updatedPreviously: false };
+}
+
+KeyboardState.prototype.update = function()
+{
+	for (var key in KeyboardState.status)
+	{
+		// insure that every keypress has "down" status exactly once
+		if ( !KeyboardState.status[key].updatedPreviously )
+		{
+			KeyboardState.status[key].down        		= true;
+			KeyboardState.status[key].pressed     		= true;
+			KeyboardState.status[key].updatedPreviously = true;
+		}
+		else // updated previously
+		{
+			KeyboardState.status[key].down = false;
+		}
+
+		// key has been flagged as "up" since last update
+		if ( KeyboardState.status[key].up )
+		{
+			delete KeyboardState.status[key];
+			continue; // move on to next key
+		}
+
+		if ( !KeyboardState.status[key].pressed ) // key released
+			KeyboardState.status[key].up = true;
+	}
+}
+
+KeyboardState.prototype.down = function(keyName)
+{
+	return (KeyboardState.status[keyName] && KeyboardState.status[keyName].down);
+}
+
+KeyboardState.prototype.pressed = function(keyName)
+{
+	return (KeyboardState.status[keyName] && KeyboardState.status[keyName].pressed);
+}
+
+KeyboardState.prototype.up = function(keyName)
+{
+	return (KeyboardState.status[keyName] && KeyboardState.status[keyName].up);
+}
+
+KeyboardState.prototype.debug = function()
+{
+	var list = "Keys active: ";
+	for (var arg in KeyboardState.status)
+		list += " " + arg
+	console.log(list);
+}
+</script>		</body>			</html>
